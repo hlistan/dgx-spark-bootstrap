@@ -91,7 +91,7 @@ services:
     <<: *common
     # utkuozdemir/nvidia_gpu_exporter: wraps nvidia-smi --query-gpu, so it exposes every field GB10 reports
     # (temp + T.Limit, power, clocks, clock-event/throttle counters). The community Spark dashboard is built on it.
-    image: utkuozdemir/nvidia_gpu_exporter:1.15.1
+    image: utkuozdemir/nvidia_gpu_exporter:1.17.0
     container_name: spark-gpu-exporter
     mem_limit: 128m
     command: ["--web.listen-address=127.0.0.1:9835"]

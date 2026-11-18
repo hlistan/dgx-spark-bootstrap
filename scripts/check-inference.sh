@@ -20,8 +20,10 @@ ok()   { printf '  \033[32m✓\033[0m %s\n' "$*"; }
 bad()  { printf '  \033[31m✗\033[0m %s\n' "$*"; rc=1; }
 
 echo "LLM  $B:8000"
-len=$(curl -fsS -m 10 "${AUTH[@]}" "$B:8000/v1/models" | python3 -c 'import sys,json
-m=[x for x in json.load(sys.stdin)["data"] if x["id"]==sys.argv[1]]; print(m[0].get("max_model_len","?") if m else "")' "$MODEL" 2>/dev/null)
+# Responses are fetched into a variable and parsed from stdin as JSON: nothing downloaded is ever executed.
+models=$(curl -fsS -m 10 "${AUTH[@]}" "$B:8000/v1/models")
+len=$(python3 -I -c 'import sys,json
+m=[x for x in json.load(sys.stdin)["data"] if x["id"]==sys.argv[1]]; print(m[0].get("max_model_len","?") if m else "")' "$MODEL" <<<"$models" 2>/dev/null)
 if [ -z "$len" ]; then bad "$MODEL not listed"
 elif [ "$len" = "$CTX" ]; then ok "model $MODEL served, context $len"
 else bad "model $MODEL served with context $len (inventory says $CTX)"; fi
@@ -30,11 +32,13 @@ else bad "model $MODEL served with context $len (inventory says $CTX)"; fi
 # tool_choice "required" uses xgrammar-constrained decoding, which with speculative decoding
 # logs "Failed to advance FSM" and is occasionally flaky — informational only.
 toolreq() {
-  curl -fsS -m 180 "${AUTH[@]}" -H 'Content-Type: application/json' "$B:8000/v1/chat/completions" -d '{
+  local resp
+  resp=$(curl -fsS -m 180 "${AUTH[@]}" -H 'Content-Type: application/json' "$B:8000/v1/chat/completions" -d '{
   "model":"'"$MODEL"'","max_tokens":4096,"messages":[{"role":"user","content":"Add 2 and 3 using the tool."}],
   "tools":[{"type":"function","function":{"name":"add","description":"Add numbers",
    "parameters":{"type":"object","properties":{"a":{"type":"number"},"b":{"type":"number"}},"required":["a","b"]}}}],
-  "tool_choice":"'"$1"'"}' | python3 -c 'import sys,json;m=json.load(sys.stdin)["choices"][0];print(len(m["message"].get("tool_calls") or []), m.get("finish_reason"))' 2>/dev/null
+  "tool_choice":"'"$1"'"}')
+  python3 -I -c 'import sys,json;m=json.load(sys.stdin)["choices"][0];print(len(m["message"].get("tool_calls") or []), m.get("finish_reason"))' <<<"$resp" 2>/dev/null
 }
 pass=0; for _ in 1 2 3; do r=$(toolreq auto); [ "${r%% *}" -gt 0 ] 2>/dev/null && pass=$((pass+1)) || last="$r"; done
 if [ $pass -eq 3 ]; then ok "tool calls (auto): 3/3"

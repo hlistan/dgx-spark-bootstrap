@@ -9,7 +9,7 @@ DIR   := ~/$(SPARK_DEPLOY_DIR)
 on     = $(SSH) 'cd $(DIR)/$(1) && docker compose $(2)'
 
 .DEFAULT_GOAL := help
-.PHONY: help lint hooks render deploy diff status check check-inference check-monitoring \
+.PHONY: help lint image-age hooks render deploy diff status check check-inference check-monitoring \
         schedule unschedule analyze bench report \
         inference-up inference-ps inference-logs \
         monitoring-env monitoring-up monitoring-down monitoring-ps monitoring-logs monitoring-reload \
@@ -24,6 +24,9 @@ render: ## Fill the config templates from inventory.env (deploy and lint do this
 
 lint: render ## Static gates: shellcheck, ruff (+bandit), yamllint, compose, promtool + rule tests, policy + site-leak scan, gitleaks
 	./scripts/lint.sh
+
+image-age: ## Monitoring image pins are at least two weeks old (S2; needs network, CI runs it)
+	./scripts/check-image-age.sh
 
 hooks: ## Run `make lint` before every commit in this clone
 	git config core.hooksPath .githooks && echo "pre-commit hook enabled (.githooks/pre-commit)"

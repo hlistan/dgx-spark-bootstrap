@@ -24,7 +24,7 @@ Without an `inventory.env`, `make lint` uses `inventory.env.example`. CI runs th
 - **Pin versions.** Container images, lint tools and GitHub Actions are pinned to an exact version (Actions to a
   commit SHA). Prefer releases that are at least two weeks old.
 - **Keep exposure as it is** unless the change is about exposure: services bind to the LAN IP or loopback, vLLM keeps
-  `--api-key` and `--allowed-origins '[]'`. `scripts/lint-policy.py` enforces this.
+  its API key and `--allowed-origins '[]'`. `scripts/lint-policy.py` enforces this.
 - **Record decisions.** A change to how the Spark is set up gets an entry or an edit in
   [docs/decisions.md](docs/decisions.md). Say what you measured and on which DGX OS and image versions.
 - **Test alert rules.** A new or changed rule in `monitoring/prometheus/rules/` gets a case in

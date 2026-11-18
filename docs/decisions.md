@@ -60,7 +60,8 @@ Revisit if Flash-Next gets a stock single-Spark recipe.
 
 ## S6 — Exposure: LAN bind + API key; firewall optional (2026-10-29)
 
-The LAN is trusted (decision 2026-10-29): the LLM binds only to the Spark's LAN IP and requires `--api-key`.
+The LAN is trusted (decision 2026-10-29): the LLM binds only to the Spark's LAN IP and requires an API key. The key reaches
+vLLM as `VLLM_API_KEY` in the container environment, not as `--api-key`, so it does not show in the process list (2026-11-18).
 vLLM's key covers only `/v1`, so `--allowed-origins '[]'` keeps browsers on allowed hosts from reading
 unauthenticated endpoints (GHSA-vvpg-rrww-wpmh). Traffic is plain HTTP; acceptable on a home/office LAN. Install `spark-firewall` (S3) if untrusted hosts join; move to
 Tailscale (WireGuard, ACL tags) if clients leave the LAN or the network is shared. Both IPs are DHCP reservations.
@@ -71,14 +72,15 @@ Tailscale (WireGuard, ACL tags) if clients leave the LAN or the network is share
 yamllint, `docker compose config` for both stacks (with the `.env.example` values), `promtool check config` and
 `promtool test rules` (`monitoring/prometheus/tests/`) using the box's own Prometheus image, gitleaks for secrets, and
 `scripts/lint-policy.py`, which knows this repo's rules: ports bind only to the LAN IP or loopback, vLLM keeps
-`--api-key` and `--allowed-origins '[]'`, images are pinned, GPU util ≤ 0.60, monitoring has memory caps and log
+its API key (in the environment, not on the command line) and `--allowed-origins '[]'`, images are pinned, GPU util ≤ 0.60, monitoring has memory caps and log
 rotation, and `inventory.env` matches what is actually served (model, context, URL, Prometheus targets).
 Tools are pinned and fetched on demand (uvx, Docker), so the result doesn't depend on the workstation.
 `make deploy` depends on `make lint`; `make hooks` adds it as a pre-commit hook. Since the repo became public
 (2026-11-18) GitHub Actions runs the same `make lint` on every push and pull request, with `inventory.env.example`
 standing in for the site inventory; gitleaks also scans the whole git history. Actions are pinned to commit SHAs
 and run with a read-only token; Dependabot proposes updates for Actions and the monitoring images after a 14-day
-cooldown (S2). Not included: image CVE scanning (the LLM image is NVIDIA's dev build, pinned on purpose by S4).
+cooldown (S2); CI also fails a pull request whose monitoring image was built less than 14 days ago
+(`make image-age`), because the cooldown does not hold for every registry. Not included: image CVE scanning (the LLM image is NVIDIA's dev build, pinned on purpose by S4).
 
 ## S8 — Periodic analysis and benchmark on the box (2026-11-02)
 

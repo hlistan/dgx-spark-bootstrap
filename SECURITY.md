@@ -32,9 +32,9 @@ The setup is meant for one DGX Spark on a LAN whose hosts you trust. Read this b
   internet; use a VPN, or a reverse proxy that terminates TLS, for anything beyond the LAN.
 - **vLLM's API key covers `/v1` only.** `/metrics`, `/health`, `/version` and `/tokenize` answer without it. The
   optional firewall unit in [host/](host/README.md) limits the port to listed IPs.
-- **One shared API key** for all clients, stored in `inference/.env` on the Spark and passed to vLLM on its command
-  line. Any user on the Spark who can run `docker` or read the process list can see it. Treat every account on
-  the Spark as trusted, and rotate the key by editing `.env` and running `docker compose up -d llm`.
+- **One shared API key** for all clients, stored in `inference/.env` (mode 600) on the Spark and passed to vLLM in
+  the container environment, not on its command line. Root and members of the `docker` group can still read it.
+  Rotate the key by editing `.env` and running `docker compose up -d llm`.
 - **Privileged monitoring containers.** cAdvisor runs privileged, node_exporter runs with AppArmor unconfined and
   the host filesystem mounted read-only, and membership of the `docker` group equals root on the Spark. All
   exporters and Prometheus listen on loopback only.

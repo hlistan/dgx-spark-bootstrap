@@ -3,7 +3,8 @@
 
     python3 -I scripts/lint-policy.py <inference.env> <monitoring.env> <inventory>     # called by scripts/lint.sh
 
-- Exposure (S6): published ports bind only to the LAN IP or loopback; vLLM keeps --api-key and --allowed-origins '[]';
+- Exposure (S6): published ports bind only to the LAN IP or loopback; vLLM keeps its API key (VLLM_API_KEY in the
+  environment, never on the command line) and --allowed-origins '[]';
   exporters listen on 127.0.0.1; Grafana keeps anonymous access off.
 - Pinning (S2): every image has an explicit version tag, never latest/main/nightly.
 - Operations: restart policy and healthcheck on inference; memory caps and log rotation on monitoring.
@@ -136,8 +137,10 @@ def main() -> int:
         err("inference: no `llm` service")
     else:
         cmd = llm.get("command") or []
-        if not flag(cmd, "--api-key"):
-            err("llm: --api-key missing (S6)")
+        if not (llm.get("environment") or {}).get("VLLM_API_KEY"):
+            err("llm: VLLM_API_KEY missing from the environment: /v1 would be open (S6)")
+        if any(a == "--api-key" or a.startswith("--api-key=") for a in cmd):
+            err("llm: pass the key as VLLM_API_KEY, not --api-key: a command line is readable by every user (S6)")
         if flag(cmd, "--allowed-origins") != "[]":
             err("llm: --allowed-origins must be '[]' (GHSA-vvpg-rrww-wpmh, S6)")
         if flag(cmd, "--served-model-name") != inv.get("SPARK_LLM_MODEL"):

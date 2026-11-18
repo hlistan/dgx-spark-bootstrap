@@ -1,7 +1,8 @@
 # Version updates for what Dependabot can read here: the Actions in .github/workflows and the image tags in
 # monitoring/compose.yaml. It cannot see the vLLM image (set through LLM_IMAGE in inference/.env.example, and pinned
 # on purpose, decision S4) or the lint tools pinned in scripts/lint.sh; update those by hand.
-# cooldown: only propose releases that are at least two weeks old (decision S2).
+# cooldown: only propose releases that are at least two weeks old (decision S2). It does not hold for every
+# registry (a two-day-old ghcr.io image was proposed), so CI also runs scripts/check-image-age.sh.
 version: 2
 updates:
   - package-ecosystem: github-actions

@@ -62,7 +62,7 @@ Retention: 30 d or 20 GB, whichever first (`.env`). Memory caps: Prometheus 1 GB
 
 - node_exporter's **cpufreq** collector hangs > 10 s on GB10 (`cppc_cpufreq`), failing every 2nd–3rd scrape — disabled.
 - DGX OS's docker AppArmor profile blocks D-Bus → node_exporter runs `apparmor=unconfined` for the systemd collector.
-- vLLM's `--api-key` doesn't cover `/metrics` and `/health`; Prometheus scrapes them on the LAN IP from the host
+- vLLM's API key doesn't cover `/metrics` and `/health`; Prometheus scrapes them on the LAN IP from the host
   itself, which the DOCKER-USER firewall rule doesn't filter.
 - `nvidia-smi` memory fields read N/A on GB10 by design; watch `node_memory_MemAvailable_bytes` instead.
 

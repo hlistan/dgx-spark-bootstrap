@@ -39,7 +39,7 @@ scrape_configs:
         regex: ""
         action: drop                    # cgroup slices without a container name
 
-  # Inference: vLLM's native /metrics (not covered by --api-key); model_name label qwen3.8-27b.
+  # Inference: vLLM's native /metrics (not covered by the API key); model_name label qwen3.8-27b.
   - job_name: vllm
     static_configs:
       - targets: ["@SPARK_HOST@:8000"]

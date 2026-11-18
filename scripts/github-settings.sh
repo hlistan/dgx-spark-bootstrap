@@ -9,6 +9,22 @@ set -euo pipefail
 REPO=$(gh repo view --json nameWithOwner -q .nameWithOwner)
 api() { gh api -H "Accept: application/vnd.github+json" "$@" >/dev/null; }
 say() { printf '  \033[32m✓\033[0m %s\n' "$*"; }
+# GitHub answers 2xx to some settings it then does not apply, so every setting is read back at the end.
+rc=0
+verify() { # verify <what> <expected> <gh api args…>
+  local what=$1 want=$2 got; shift 2
+  for _ in 1 2 3 4 5; do
+    got=$(gh api "$@" 2>/dev/null || true)
+    [ "$got" = "$want" ] && { say "verified: $what"; return; }
+    sleep 3
+  done
+  printf '  \033[31m✗\033[0m %s: expected %s, got %s\n' "$what" "$want" "${got:-nothing}"; rc=1
+}
+verify_base() {
+  verify "Dependabot security updates" enabled "repos/$REPO" -q .security_and_analysis.dependabot_security_updates.status
+  verify "Actions pinned to SHAs" true "repos/$REPO/actions/permissions" -q .sha_pinning_required
+  verify "read-only workflow token" read "repos/$REPO/actions/permissions/workflow" -q .default_workflow_permissions
+}
 
 echo "Settings for $REPO"
 api -X PATCH "repos/$REPO" -F has_wiki=false -F has_projects=false -F delete_branch_on_merge=true \
@@ -22,12 +38,12 @@ api -X PUT "repos/$REPO/actions/permissions/workflow" -f default_workflow_permis
   -F can_approve_pull_request_reviews=false
 say "Actions must be pinned to a commit SHA; workflow token read-only by default"
 
-[ "${1:-}" = --public ] || { echo "Run again with --public once the repository is public."; exit 0; }
+[ "${1:-}" = --public ] || { verify_base; echo "Run again with --public once the repository is public."; exit $rc; }
 
-api -X PATCH "repos/$REPO" --input - <<'JSON'
-{"security_and_analysis": {"secret_scanning": {"status": "enabled"},
-                           "secret_scanning_push_protection": {"status": "enabled"}}}
-JSON
+# One feature per call: a combined request answered 200 but left both off (seen 2026-11-18).
+for feature in secret_scanning secret_scanning_push_protection; do
+  api -X PATCH "repos/$REPO" -f "security_and_analysis[$feature][status]=enabled"
+done
 say "secret scanning and push protection on"
 api -X PUT "repos/$REPO/private-vulnerability-reporting"
 say "private vulnerability reporting on (SECURITY.md links to it)"
@@ -57,3 +73,11 @@ id=$(gh api "repos/$REPO/rulesets" -q '.[] | select(.name == "main") | .id')
 if [ -n "$id" ]; then echo "$RULESET" | api -X PUT "repos/$REPO/rulesets/$id" --input -
 else echo "$RULESET" | api -X POST "repos/$REPO/rulesets" --input -; fi
 say "ruleset 'main': no deletion or force-push, pull request + lint check required (admin may bypass)"
+
+verify_base
+verify "secret scanning" enabled "repos/$REPO" -q .security_and_analysis.secret_scanning.status
+verify "push protection" enabled "repos/$REPO" -q .security_and_analysis.secret_scanning_push_protection.status
+verify "private vulnerability reporting" true "repos/$REPO/private-vulnerability-reporting" -q .enabled
+verify "CodeQL default setup" configured "repos/$REPO/code-scanning/default-setup" -q .state
+verify "ruleset 'main' active" active "repos/$REPO/rulesets" -q '.[] | select(.name == "main") | .enforcement'
+exit $rc

@@ -28,3 +28,5 @@ jobs:
         with:
           enable-cache: false
       - run: make lint
+      - name: Image pins are at least two weeks old
+        run: make image-age

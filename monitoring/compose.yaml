@@ -21,7 +21,7 @@ x-common: &common
 services:
   prometheus:
     <<: *common
-    image: prom/prometheus:v3.15.0
+    image: prom/prometheus:v3.15.1
     container_name: spark-prometheus
     mem_limit: 1g
     command:

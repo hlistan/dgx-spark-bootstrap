@@ -105,7 +105,7 @@ services:
 
   cadvisor:
     <<: *common
-    image: ghcr.io/google/cadvisor:v0.60.6
+    image: ghcr.io/google/cadvisor:v0.61.0
     container_name: spark-cadvisor
     mem_limit: 256m
     privileged: true

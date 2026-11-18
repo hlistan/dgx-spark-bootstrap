@@ -1,5 +1,5 @@
 # Alert rules for the Spark. They fire in Prometheus (http://127.0.0.1:9090/alerts) and show in Grafana's
-# alert list; no notifier is wired yet (README "Next steps"). Thresholds are tuned to GB10 + this stack:
+# alert list; no notifier is wired yet (monitoring/README.md "Next steps"). Thresholds are tuned to GB10 + this stack:
 # 128 GB unified memory, vLLM sized at 0.60, ~40 GB planned headroom (inference/README.md).
 groups:
   - name: spark-hardware

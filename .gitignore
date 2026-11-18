@@ -10,6 +10,8 @@ research_notes/
 # old Chatterbox voice clip (voice removed, S5), kept locally only until archived
 inference/voices/
 inference/logs/
+# local tool state
+.claude/
 .DS_Store
 __pycache__/
 .ruff_cache/

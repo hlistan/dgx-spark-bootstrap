@@ -1,0 +1,19 @@
+# Version updates for what Dependabot can read here: the Actions in .github/workflows and the image tags in
+# monitoring/compose.yaml. It cannot see the vLLM image (set through LLM_IMAGE in inference/.env.example, and pinned
+# on purpose, decision S4) or the lint tools pinned in scripts/lint.sh; update those by hand.
+# cooldown: only propose releases that are at least two weeks old (decision S2).
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule: { interval: weekly }
+    cooldown: { default-days: 14 }
+    groups:
+      actions: { patterns: ["*"] }
+    commit-message: { prefix: ci }
+
+  - package-ecosystem: docker-compose
+    directory: /monitoring
+    schedule: { interval: weekly }
+    cooldown: { default-days: 14 }
+    commit-message: { prefix: monitoring }

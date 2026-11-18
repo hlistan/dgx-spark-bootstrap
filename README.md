@@ -1,5 +1,9 @@
 # dgx-spark-bootstrap
 
+[![lint](https://github.com/hlistan/dgx-spark-bootstrap/actions/workflows/lint.yml/badge.svg)](https://github.com/hlistan/dgx-spark-bootstrap/actions/workflows/lint.yml)
+[![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/hlistan/dgx-spark-bootstrap/badge)](https://scorecard.dev/viewer/?uri=github.com/hlistan/dgx-spark-bootstrap)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+
 Configuration for running one NVIDIA DGX Spark as a coding-LLM server on a local network. You manage the Spark
 from a workstation with `make` and SSH; nothing is edited on the Spark by hand.
 
@@ -142,6 +146,8 @@ share the network, install the firewall unit in [host/](host/README.md), which l
 IPs, or put the Spark behind a VPN. Video input is disabled because of two vLLM advisories that affect the pinned
 image; the details are in decision S4.
 
+The full list of known limits, and how to report a vulnerability privately, is in [SECURITY.md](SECURITY.md).
+
 ## Repository layout
 
 | Path | Contents |
@@ -150,9 +156,10 @@ image; the details are in decision S4.
 | `monitoring/` | Compose file, Prometheus config template, alert rules with unit tests, Grafana dashboards |
 | `analysis/` | `spark-bench.py`, `spark-analyze.py` and the crontab that `make schedule` installs |
 | `host/` | Steps that need sudo on the Spark: firewall unit, sysctl, the boot-race fix, the GPU-fault runbook |
-| `scripts/` | Client probes, the lint runner, the policy check, the template renderer |
+| `scripts/` | Client probes, the lint runner, the policy check, the template renderer, `github-settings.sh` (repository settings for a fork) |
 | `docs/` | `decisions.md` (numbered S1 to S8) and `daily-review.md` (a checklist for a daily operator or agent review) |
 | `inventory.env.example` | Template for the site inventory |
+| `.github/` | CI (the lint gates, OpenSSF Scorecard), Dependabot config, issue and pull request templates |
 
 ## Updating
 
@@ -164,9 +171,12 @@ driver updates go through NVIDIA's
 
 ## Contributing
 
-Run `make hooks` once per clone so the lint gates run before every commit. Record a decision that changes how the
-Spark is set up in `docs/decisions.md`.
+Issues and pull requests are welcome; see [CONTRIBUTING.md](CONTRIBUTING.md) and the
+[code of conduct](CODE_OF_CONDUCT.md). Run `make hooks` once per clone so the lint gates run before every commit;
+CI runs the same gates on every pull request. Record a decision that changes how the Spark is set up in
+`docs/decisions.md`.
 
 ## License
 
-[MIT](LICENSE)
+[MIT](LICENSE). The two vendored Grafana dashboards keep their own licenses; see
+[THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).

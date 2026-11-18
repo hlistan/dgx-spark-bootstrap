@@ -24,16 +24,18 @@ on this box 2026-11-02) and is what the community dashboard is built on. GPU mem
   switches 24h/7d), and the trends of the nightly benchmark (with the regression-alert line) and of the analysis.
   Fed by `spark_analysis_check` (one series per check) and the other `spark_analysis_*` / `spark_bench_*` metrics.
 - **DGX Spark — inference + GB10** (`dgx-spark-vllm`) — [RodriMora/dgx-spark-grafana-dashboard](https://github.com/RodriMora/dgx-spark-grafana-dashboard)
-  (MIT) @ `0ea0656`, patched by `grafana/vendor-dashboards.py`: a **Model** variable (we run two vLLMs) injected into
+  (MIT) @ `0ea0656`, patched by `grafana/vendor-dashboards.py`: a **Model** variable (so a second vLLM model can be told apart) injected into
   every `vllm:*` query. The "cloud-equivalent cost" cards are upstream's pricing assumptions — informational only.
-- **Node Exporter Full** — grafana.com [1860](https://grafana.com/grafana/dashboards/1860) rev 45.
+- **Node Exporter Full** — grafana.com [1860](https://grafana.com/grafana/dashboards/1860) rev 45 (Apache-2.0).
+
+License texts and the changes made to both: [THIRD_PARTY_NOTICES.md](../THIRD_PARTY_NOTICES.md).
 
 To update: bump the pinned SHA/revision in `vendor-dashboards.py`, `make dashboards`, review the diff, deploy.
 Don't edit dashboards in the UI (`allowUiUpdates: false`); export the JSON into a new file here if you build one.
 
 ## Alerts (`prometheus/rules/spark.yml`)
 
-23 rules in 5 groups: hardware (T.Limit < 10 °C, thermal throttling, power brake, NVMe > 70 °C, EDAC errors),
+24 rules in 5 groups: hardware (T.Limit < 10 °C, thermal throttling, power brake, NVMe > 70 °C, EDAC errors),
 OS (MemAvailable < 8 GiB, swapping, disk < 10 %, failed systemd unit, NTP), inference (endpoint
 down, container restart, KV cache > 90 %, queueing, preemptions, p95 TTFT > 20 s, drafter acceptance < 25 %),
 analysis (benchmark > 15 % below its 14-day median, benchmark failed, failing analysis checks, schedule stale,

@@ -74,8 +74,11 @@ yamllint, `docker compose config` for both stacks (with the `.env.example` value
 `--api-key` and `--allowed-origins '[]'`, images are pinned, GPU util ≤ 0.60, monitoring has memory caps and log
 rotation, and `inventory.env` matches what is actually served (model, context, URL, Prometheus targets).
 Tools are pinned and fetched on demand (uvx, Docker), so the result doesn't depend on the workstation.
-`make deploy` depends on `make lint`; `make hooks` adds it as a pre-commit hook. There is no CI: several gates need
-Docker and the site's own `inventory.env`. Not included: image CVE scanning (the LLM image is NVIDIA's dev build, pinned on purpose by S4).
+`make deploy` depends on `make lint`; `make hooks` adds it as a pre-commit hook. Since the repo became public
+(2026-11-18) GitHub Actions runs the same `make lint` on every push and pull request, with `inventory.env.example`
+standing in for the site inventory; gitleaks also scans the whole git history. Actions are pinned to commit SHAs
+and run with a read-only token; Dependabot proposes updates for Actions and the monitoring images after a 14-day
+cooldown (S2). Not included: image CVE scanning (the LLM image is NVIDIA's dev build, pinned on purpose by S4).
 
 ## S8 — Periodic analysis and benchmark on the box (2026-11-02)
 

@@ -1,0 +1,37 @@
+name: Bug report
+description: Something in this repo's configuration or scripts does not work as documented
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: >
+        Remove API keys, passwords, tokens, real IP addresses and host names from everything you paste.
+        Security problems go to the private form linked in SECURITY.md, not here.
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened
+      description: The command you ran, what you expected and what you got.
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Output or logs
+      description: For example `make check`, `make status`, `make inference-logs S=llm`. Redact secrets and addresses.
+      render: text
+  - type: input
+    id: versions
+    attributes:
+      label: Versions
+      description: DGX OS version, GPU driver, `LLM_IMAGE` tag, and the commit of this repo.
+      placeholder: DGX OS 7.6, driver 580.x, nvcr.io/nvidia/vllm:26.10.pre1-py3, commit abc1234
+    validations:
+      required: true
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options: [inference, monitoring, analysis, host, lint or Makefile, documentation]
+    validations:
+      required: true

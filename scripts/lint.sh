@@ -49,7 +49,12 @@ step "promtool test rules"              docker run --rm --entrypoint promtool -v
                                           -w /etc/prometheus/tests "$PROMETHEUS" test rules spark.test.yml
 step "policy (exposure, pinning, inventory consistency, site leaks)" \
                                         python3 -I scripts/lint-policy.py "$TMP/inference.env" "$TMP/monitoring.env" "$INV"
-step "gitleaks (secrets)"               docker run --rm -v "$PWD:/repo:ro" "$GITLEAKS" dir /repo --no-banner --redact \
+step "gitleaks (secrets, files)"        docker run --rm -v "$PWD:/repo:ro" "$GITLEAKS" dir /repo --no-banner --redact \
+                                          --config /repo/.gitleaks.toml
+# Every commit, not only the working tree: a secret that was committed and later removed is still published.
+# Skipped where .git is not a directory (a git worktree), because the container can't follow the link.
+[ -d .git ] && \
+step "gitleaks (secrets, git history)"  docker run --rm -v "$PWD:/repo:ro" "$GITLEAKS" git /repo --no-banner --redact \
                                           --config /repo/.gitleaks.toml
 
 if [ $rc = 0 ]; then printf '\033[32mall gates passed\033[0m\n'; else printf '\033[31mgates failed\033[0m\n'; fi

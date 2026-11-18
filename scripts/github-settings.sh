@@ -52,7 +52,8 @@ api -X PATCH "repos/$REPO/code-scanning/default-setup" --input - <<'JSON'
 JSON
 say "CodeQL default setup on for Python and Actions workflows"
 
-# Default branch: no deletion, no force-push, changes arrive by pull request with the lint check green.
+# Default branch: no deletion, no force-push, changes arrive by pull request, up to date with the branch and with
+# the lint check green.
 # The repository admin may bypass, so a sole maintainer is not locked out.
 RULESET=$(cat <<'JSON'
 {"name": "main", "target": "branch", "enforcement": "active",
@@ -64,7 +65,7 @@ RULESET=$(cat <<'JSON'
    {"type": "pull_request", "parameters": {"required_approving_review_count": 0,
      "dismiss_stale_reviews_on_push": true, "require_code_owner_review": false,
      "require_last_push_approval": false, "required_review_thread_resolution": true}},
-   {"type": "required_status_checks", "parameters": {"strict_required_status_checks_policy": false,
+   {"type": "required_status_checks", "parameters": {"strict_required_status_checks_policy": true,
      "required_status_checks": [{"context": "lint"}]}}
  ]}
 JSON

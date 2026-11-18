@@ -21,7 +21,7 @@ x-common: &common
 services:
   prometheus:
     <<: *common
-    image: prom/prometheus:v3.15.0
+    image: prom/prometheus:v3.15.1
     container_name: spark-prometheus
     mem_limit: 1g
     command:
@@ -127,7 +127,7 @@ services:
 
   blackbox:
     <<: *common
-    image: prom/blackbox-exporter:v0.29.0
+    image: prom/blackbox-exporter:v0.29.1
     container_name: spark-blackbox
     mem_limit: 64m
     command:

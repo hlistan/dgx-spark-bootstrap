@@ -1,0 +1,174 @@
+# Alert rules for the Spark. They fire in Prometheus (http://127.0.0.1:9090/alerts) and show in Grafana's
+# alert list; no notifier is wired yet (README "Next steps"). Thresholds are tuned to GB10 + this stack:
+# 128 GB unified memory, vLLM sized at 0.60, ~40 GB planned headroom (inference/README.md).
+groups:
+  - name: spark-hardware
+    rules:
+      - alert: SparkGpuNearThermalLimit
+        expr: nvidia_smi_temperature_gpu_tlimit < 10
+        for: 5m
+        labels: { severity: warning }
+        annotations:
+          summary: "GB10 within {{ $value }} °C of its slowdown temperature (T.Limit)"
+      - alert: SparkGpuThermalThrottling
+        expr: >
+          rate(nvidia_smi_clocks_event_reasons_counters_hw_thermal_slowdown_seconds[5m]) > 0
+          or rate(nvidia_smi_clocks_event_reasons_counters_sw_thermal_slowdown_seconds[5m]) > 0
+        for: 5m
+        labels: { severity: warning }
+        annotations:
+          summary: "GB10 is thermally throttling — check airflow / ambient temperature"
+      - alert: SparkGpuPowerBrake
+        expr: rate(nvidia_smi_clocks_event_reasons_counters_hw_power_brake_slowdown_seconds[5m]) > 0
+        for: 2m
+        labels: { severity: warning }
+        annotations:
+          summary: "GB10 hardware power brake active — check the PSU / power adapter"
+      # A faulted GB10 ("GPU requires reset", e.g. after Xid 119) keeps serving from live CUDA contexts, but the
+      # exporter drops T.Limit/power/throttle series — so every other GPU alert goes silent. Recovery: reboot.
+      - alert: SparkGpuTelemetryLost
+        expr: up{job="gpu"} == 1 unless on() nvidia_smi_temperature_gpu_tlimit
+        for: 15m
+        labels: { severity: critical }
+        annotations:
+          summary: "GB10 telemetry incomplete: GPU likely needs a reset (Xid in kernel log) — reboot"
+      - alert: SparkNvmeHot
+        expr: node_hwmon_temp_celsius{chip=~"nvme.*", sensor="temp1"} > 70
+        for: 10m
+        labels: { severity: warning }
+        annotations:
+          summary: "NVMe at {{ $value }} °C"
+      - alert: SparkMemoryErrors
+        expr: >
+          increase(node_edac_correctable_errors_total[1h]) > 0
+          or increase(node_edac_uncorrectable_errors_total[1h]) > 0
+        labels: { severity: critical }
+        annotations:
+          summary: "EDAC reports memory errors (also see `ras-mc-ctl --summary`)"
+
+  - name: spark-os
+    rules:
+      - alert: SparkUnifiedMemoryLow
+        expr: node_memory_MemAvailable_bytes < 8 * 1024^3
+        for: 5m
+        labels: { severity: critical }
+        annotations:
+          summary: "Only {{ $value | humanize1024 }}B unified memory available — vLLM risks OOM"
+      - alert: SparkSwapping
+        expr: rate(node_vmstat_pswpout[5m]) > 100
+        for: 10m
+        labels: { severity: warning }
+        annotations:
+          summary: "Swapping out {{ $value | humanize }} pages/s — inference latency will suffer"
+      - alert: SparkDiskFilling
+        expr: node_filesystem_avail_bytes{mountpoint="/", fstype!~"tmpfs|overlay"} / node_filesystem_size_bytes < 0.10
+        for: 15m
+        labels: { severity: warning }
+        annotations:
+          summary: "Root filesystem below 10% free (model weights + images live here)"
+      - alert: SparkSystemdUnitFailed
+        expr: node_systemd_unit_state{state="failed"} == 1
+        for: 5m
+        labels: { severity: warning }
+        annotations:
+          summary: "systemd unit {{ $labels.name }} failed"
+      - alert: SparkClockUnsynced
+        expr: node_timex_sync_status == 0
+        for: 30m
+        labels: { severity: warning }
+        annotations:
+          summary: "System clock not NTP-synchronised"
+
+  - name: spark-inference
+    rules:
+      - alert: InferenceEndpointDown
+        expr: probe_success{job="blackbox"} == 0
+        for: 2m
+        labels: { severity: critical }
+        annotations:
+          summary: "{{ $labels.service }} health check failing ({{ $labels.instance }})"
+      - alert: InferenceContainerRestarted
+        expr: changes(container_start_time_seconds{name="spark-llm"}[15m]) > 0
+        labels: { severity: warning }
+        annotations:
+          summary: "Container {{ $labels.name }} restarted in the last 15 min"
+      - alert: VllmKvCacheSaturated
+        expr: vllm:kv_cache_usage_perc > 0.90
+        for: 10m
+        labels: { severity: warning }
+        annotations:
+          summary: "{{ $labels.model_name }} KV cache {{ $value | humanizePercentage }} full — expect queueing"
+      - alert: VllmRequestsQueued
+        expr: vllm:num_requests_waiting > 0
+        for: 5m
+        labels: { severity: warning }
+        annotations:
+          summary: "{{ $labels.model_name }} has {{ $value }} requests waiting for 5 min (max-num-seqs or KV bound)"
+      - alert: VllmPreempting
+        expr: increase(vllm:num_preemptions_total[10m]) > 0
+        labels: { severity: warning }
+        annotations:
+          summary: "{{ $labels.model_name }} preempted requests — KV cache is thrashing"
+      - alert: VllmSlowFirstToken
+        expr: >
+          histogram_quantile(0.95, sum by (le, model_name) (rate(vllm:time_to_first_token_seconds_bucket[15m]))) > 20
+          and sum by (model_name) (rate(vllm:time_to_first_token_seconds_count[15m])) > 0
+        for: 15m
+        labels: { severity: warning }
+        annotations:
+          summary: "{{ $labels.model_name }} p95 TTFT {{ $value | humanizeDuration }}"
+      - alert: VllmSpecDecodeAcceptanceLow
+        expr: >
+          sum by (model_name) (rate(vllm:spec_decode_num_accepted_tokens_total[30m]))
+          / sum by (model_name) (rate(vllm:spec_decode_num_draft_tokens_total[30m])) < 0.25
+        for: 30m
+        labels: { severity: info }
+        annotations:
+          summary: "{{ $labels.model_name }} drafter acceptance {{ $value | humanizePercentage }}, DFlash2 barely helps"
+
+  - name: spark-monitoring
+    rules:
+      - alert: ScrapeTargetDown
+        expr: up == 0
+        for: 5m
+        labels: { severity: warning }
+        annotations:
+          summary: "{{ $labels.job }} target {{ $labels.instance }} is down"
+
+  # Periodic analysis + benchmark (analysis/, S8). They run from the Spark's crontab (`make schedule`) and publish
+  # results through node_exporter's textfile collector; these rules catch regressions and a stalled schedule.
+  - name: spark-analysis
+    rules:
+      - alert: SparkBenchRegression
+        expr: >
+          spark_bench_decode_tokens_per_second
+          < 0.85 * quantile_over_time(0.5, spark_bench_decode_tokens_per_second[14d])
+        for: 1h
+        labels: { severity: warning }
+        annotations:
+          summary: "Benchmark {{ $labels.case }}: decode {{ $value | printf \"%.1f\" }} tok/s, >15% below 14-day median"
+      - alert: SparkBenchFailed
+        expr: spark_bench_last_success == 0
+        for: 10m
+        labels: { severity: warning }
+        annotations:
+          summary: "Nightly benchmark failed — see ~/spark-reports/cron.log on the Spark"
+      - alert: SparkAnalysisFindings
+        expr: spark_analysis_findings{severity="fail"} > 0
+        labels: { severity: warning }
+        annotations:
+          summary: "{{ $labels.window }} analysis: {{ $value }} failing checks — `make report`"
+      - alert: SparkAnalysisStale
+        expr: >
+          time() - spark_analysis_last_run_timestamp_seconds{window="24h"} > 26 * 3600
+          or time() - spark_bench_last_run_timestamp_seconds > 26 * 3600
+        for: 30m
+        labels: { severity: warning }
+        annotations:
+          summary: "Periodic analysis/benchmark hasn't run for over 26 h — check `make schedule`"
+      - alert: SparkTextfileScrapeError
+        expr: node_textfile_scrape_error == 1
+        for: 30m
+        labels: { severity: warning }
+        annotations:
+          summary: "node_exporter can't read the analysis metrics (SPARK_REPORTS_DIR/metrics)"

@@ -1,0 +1,15 @@
+[Unit]
+Description=Spark service ports: allow only the trusted LAN hosts
+After=docker.service
+Requires=docker.service
+PartOf=docker.service
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+EnvironmentFile=/etc/default/spark-firewall
+ExecStart=/usr/local/sbin/spark-firewall.sh "${SPARK_ALLOWED_IPS}" apply
+ExecStop=/usr/local/sbin/spark-firewall.sh "${SPARK_ALLOWED_IPS}" remove
+
+[Install]
+WantedBy=multi-user.target docker.service

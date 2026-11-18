@@ -1,0 +1,81 @@
+# Inference on the NVIDIA DGX Spark (GB10, arm64, 128 GB unified memory): one coding LLM as an OpenAI API.
+# Deploy with `make deploy && make inference-up` (../README.md); first-time setup: README.md step by step.
+# Sn = decision n in ../docs/decisions.md. Coding only (S5): no voice services, no fallback model.
+#
+# The service binds ONLY to the Spark's LAN IP and requires SPARK_API_KEY (S6).
+# vLLM's --api-key protects /v1 only; ../host/firewall/spark-firewall.sh (optional) limits the port to
+# SPARK_ALLOWED_IPS.
+# Sampling comes from the model's generation_config.json; Qwen3.8's thinking mode wants presence_penalty 0, so
+# clients should not send one.
+
+name: spark-inference
+
+services:
+  llm:
+    image: ${LLM_IMAGE:?set LLM_IMAGE}
+    container_name: spark-llm
+    restart: unless-stopped
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+    ipc: host
+    ulimits:
+      memlock: -1
+      stack: 67108864
+    ports:
+      - "${SPARK_BIND_IP:?set SPARK_BIND_IP}:8000:8000"
+    volumes:
+      - hf-cache:/root/.cache/huggingface   # only this: the image keeps prebuilt kernel caches in /root/.cache
+    environment:
+      HF_TOKEN: ${HF_TOKEN:-}
+      # Serve from the cache only: weights are pinned and already in hf-cache. Without it, a boot where the
+      # container gets DNS before DHCP does crash-loops on "Temporary failure in name resolution" (2026-11-17).
+      # To fetch a new model or revision, run the download with HF_HUB_OFFLINE=0 first (README).
+      HF_HUB_OFFLINE: "1"
+    # NVIDIA's validated recipe for Qwen3.8-27B NVFP4 on a 128 GB Spark (local-ai-inference-recipes,
+    # 2026-10-19: 37 tok/s decode, AgentPerf multi-turn replay with prefix caching on), with our port, name, key
+    # and 256k context (native for Qwen3.8, no YaRN; the recipe uses 128k, S4). Prefix caching (on by default) is
+    # safe with the DFlash2 drafter only on images with vllm#55601 (26.10.pre1 carries it; upstream from v0.32.0);
+    # without it every cache hit returns corrupted text (vllm#60174). GPU util 0.60 is on purpose: 0.70+ hung
+    # nodes during startup autotune. Draft length 7 measured best here (k=4 and k=10 were ~17% slower, S4).
+    # Video off (no client sends it; images keep the default 999): this dev build predates the 0.31.0 fixes for
+    # GHSA-vxqj-p4gw-9h4c / GHSA-894j-wg8m-63h8. A request-set num_frames=-1 or video_backend=openpangu decodes
+    # unbounded frames, and /tokenize is outside --api-key. With video 0, the count check rejects the request before
+    # decoding.
+    entrypoint: ["vllm", "serve"]
+    # The recipe's JSON flags stay on one line each (splitting them would change the argv and recreate the container).
+    # yamllint disable rule:line-length
+    command: >
+      nvidia/Qwen3.8-27B-NVFP4
+      --revision 482ca0f3832238542f8f5295dde86b5f22711d80
+      --served-model-name qwen3.8-27b
+      --kv-cache-dtype fp8
+      --max-model-len 262144
+      --max-num-seqs 8
+      --async-scheduling
+      --enable-flashinfer-autotune
+      --gpu-memory-utilization ${LLM_GPU_UTIL:-0.60}
+      --kernel-config '{"linear_backend":"nvfp4_dynamic","nvfp4_dynamic_max_tokens":16,"unquantized_linear_backend":"flashinfer_cudnn","linear_backend_per_quant":{"fp8_w8a8":"cutlass"}}'
+      --speculative-config '{"method":"dflash","model":"z-lab/Qwen3.8-27B-DFlash2","num_speculative_tokens":7,"draft_sample_method":"probabilistic","rejection_sample_method":"standard"}'
+      --compilation-config '{"pass_config":{"fuse_act_quant":true},"max_cudagraph_capture_size":64}'
+      --reasoning-parser qwen3
+      --tool-call-parser qwen3_xml
+      --enable-auto-tool-choice
+      --limit-mm-per-prompt '{"video": 0}'
+      --host 0.0.0.0 --port 8000
+      --allowed-origins '[]'
+      --api-key ${SPARK_API_KEY:?set SPARK_API_KEY}
+    # yamllint enable rule:line-length
+    healthcheck:
+      test: ["CMD", "curl", "-fs", "http://127.0.0.1:8000/health"]
+      interval: 30s
+      timeout: 5s
+      start_period: 900s
+      retries: 3
+
+volumes:
+  hf-cache:

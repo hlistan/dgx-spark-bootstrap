@@ -1,0 +1,15 @@
+# Secrets and site-specific values never enter git (README "Site configuration and secrets").
+.env
+*.env
+!*.env.example
+# rendered from prometheus.yml.tmpl + inventory.env by `make render`
+monitoring/prometheus/prometheus.yml
+# local output about one installation: review reports, research notes
+reports/
+research_notes/
+# old Chatterbox voice clip (voice removed, S5), kept locally only until archived
+inference/voices/
+inference/logs/
+.DS_Store
+__pycache__/
+.ruff_cache/

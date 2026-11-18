@@ -1,0 +1,10 @@
+# gitleaks config for `make lint` (S7): the default rules, minus paths that are never committed or deployed.
+[extend]
+useDefault = true
+
+[allowlist]
+description = "local-only files"
+paths = [
+  '''^\.git/''',
+  '''^inference/voices/''',
+]

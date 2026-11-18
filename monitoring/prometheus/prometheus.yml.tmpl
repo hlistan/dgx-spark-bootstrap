@@ -1,0 +1,70 @@
+# Prometheus on the Spark (host network). Exporters listen on 127.0.0.1; vLLM binds only to the LAN IP.
+# Template: `make render` fills the @SPARK_...@ placeholders from inventory.env and writes prometheus.yml
+# (gitignored) next to this file. Edit the template, never the rendered file.
+# Every target carries dgx_spark="true" + host_id, the labels the community DGX Spark dashboard filters on.
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+rule_files:
+  - /etc/prometheus/rules/*.yml
+
+scrape_configs:
+  - job_name: prometheus
+    static_configs:
+      - targets: ["127.0.0.1:9090"]
+        labels: { host_id: @SPARK_HOSTNAME@ }
+
+  # OS: CPU, unified memory (MemAvailable is the number that decides vLLM OOMs), disk, NVMe temp, network,
+  # systemd units, EDAC/RAS.
+  - job_name: node
+    static_configs:
+      - targets: ["127.0.0.1:9100"]
+        labels: { host_id: @SPARK_HOSTNAME@, dgx_spark: "true" }
+
+  # Hardware: GB10 temperature / T.Limit, power, clocks, throttle reasons. 10s: throttling is bursty.
+  - job_name: gpu
+    scrape_interval: 10s
+    static_configs:
+      - targets: ["127.0.0.1:9835"]
+        labels: { host_id: @SPARK_HOSTNAME@, dgx_spark: "true" }
+
+  # Containers: per-service CPU / memory / restarts (container_start_time_seconds).
+  - job_name: cadvisor
+    static_configs:
+      - targets: ["127.0.0.1:8088"]
+        labels: { host_id: @SPARK_HOSTNAME@, dgx_spark: "true" }
+    metric_relabel_configs:
+      - source_labels: [name]
+        regex: ""
+        action: drop                    # cgroup slices without a container name
+
+  # Inference: vLLM's native /metrics (not covered by --api-key); model_name label qwen3.8-27b.
+  - job_name: vllm
+    static_configs:
+      - targets: ["@SPARK_HOST@:8000"]
+        labels: { host_id: @SPARK_HOSTNAME@, dgx_spark: "true", service: llm }
+
+  # Endpoint health from outside the process: the LLM and Grafana.
+  - job_name: blackbox
+    metrics_path: /probe
+    params: { module: [http_2xx] }
+    static_configs:
+      - targets: ["http://@SPARK_HOST@:8000/health"]
+        labels: { service: llm }
+      - targets: ["http://@SPARK_HOST@:3000/api/health"]
+        labels: { service: grafana }
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: __param_target
+      - source_labels: [__param_target]
+        target_label: instance
+      - target_label: __address__
+        replacement: 127.0.0.1:9115
+      - target_label: host_id
+        replacement: @SPARK_HOSTNAME@
+
+  - job_name: blackbox-exporter
+    static_configs:
+      - targets: ["127.0.0.1:9115"]
+        labels: { host_id: @SPARK_HOSTNAME@ }

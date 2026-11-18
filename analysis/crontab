@@ -1,0 +1,8 @@
+# BEGIN spark-analysis — managed by `make schedule` from analysis/crontab in the repo (S8); edit there, not here.
+# Times are the Spark's local time. Output goes to ~/spark-reports/cron.log (trimmed by spark-analyze.py).
+30 3 * * *  /usr/bin/python3 -I $HOME/spark/analysis/spark-bench.py >> $HOME/spark-reports/cron.log 2>&1
+15 6 * * *  /usr/bin/python3 -I $HOME/spark/analysis/spark-analyze.py --window 24h >> $HOME/spark-reports/cron.log 2>&1
+45 6 * * 1  /usr/bin/python3 -I $HOME/spark/analysis/spark-analyze.py --window 7d >> $HOME/spark-reports/cron.log 2>&1
+# Boot race: Docker may start before the LAN IP exists, so spark-llm fails to bind 8000 (host/README.md).
+@reboot     /bin/sh $HOME/spark/host/llm-boot-start.sh >> $HOME/spark-reports/cron.log 2>&1
+# END spark-analysis

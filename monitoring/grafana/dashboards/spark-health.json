@@ -1,0 +1,1116 @@
+{
+ "uid": "spark-health",
+ "title": "DGX Spark — health",
+ "description": "Home: alerts, the latest periodic analysis and the nightly benchmark (docs/decisions.md S8).",
+ "tags": [
+  "spark"
+ ],
+ "timezone": "browser",
+ "editable": false,
+ "graphTooltip": 1,
+ "refresh": "5m",
+ "schemaVersion": 41,
+ "version": 1,
+ "time": {
+  "from": "now-14d",
+  "to": "now"
+ },
+ "timepicker": {},
+ "links": [
+  {
+   "type": "link",
+   "title": "Inference + GB10",
+   "url": "/d/dgx-spark-vllm",
+   "icon": "dashboard",
+   "keepTime": false,
+   "targetBlank": false,
+   "tags": []
+  },
+  {
+   "type": "link",
+   "title": "Node Exporter Full",
+   "url": "/d/rYdddlPWk",
+   "icon": "dashboard",
+   "keepTime": false,
+   "targetBlank": false,
+   "tags": []
+  }
+ ],
+ "annotations": {
+  "list": []
+ },
+ "templating": {
+  "list": [
+   {
+    "name": "window",
+    "label": "Analysis window",
+    "type": "custom",
+    "query": "24h,7d",
+    "current": {
+     "text": "24h",
+     "value": "24h"
+    },
+    "hide": 0,
+    "includeAll": false,
+    "multi": false,
+    "options": [
+     {
+      "text": "24h",
+      "value": "24h",
+      "selected": true
+     },
+     {
+      "text": "7d",
+      "value": "7d",
+      "selected": false
+     }
+    ]
+   }
+  ]
+ },
+ "panels": [
+  {
+   "id": 1,
+   "type": "stat",
+   "title": "Alerts firing",
+   "description": "Prometheus alert rules firing right now (monitoring/prometheus/rules/spark.yml). Details in the table below.",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "prometheus"
+   },
+   "gridPos": {
+    "x": 0,
+    "y": 0,
+    "w": 4,
+    "h": 4
+   },
+   "targets": [
+    {
+     "datasource": {
+      "type": "prometheus",
+      "uid": "prometheus"
+     },
+     "refId": "A",
+     "expr": "count(ALERTS{alertstate=\"firing\"}) or vector(0)",
+     "instant": true,
+     "range": false,
+     "format": "time_series"
+    }
+   ],
+   "options": {
+    "reduceOptions": {
+     "calcs": [
+      "lastNotNull"
+     ],
+     "fields": "",
+     "values": false
+    },
+    "colorMode": "background",
+    "graphMode": "none",
+    "textMode": "value",
+    "justifyMode": "center"
+   },
+   "fieldConfig": {
+    "defaults": {
+     "thresholds": {
+      "mode": "absolute",
+      "steps": [
+       {
+        "color": "green",
+        "value": null
+       },
+       {
+        "color": "red",
+        "value": 1
+       }
+      ]
+     },
+     "noValue": "0"
+    },
+    "overrides": []
+   }
+  },
+  {
+   "id": 2,
+   "type": "stat",
+   "title": "Latest $window check",
+   "description": "Worst result of the latest periodic analysis (analysis/spark-analyze.py, S8). Daily at 06:15, weekly Mon 06:45.",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "prometheus"
+   },
+   "gridPos": {
+    "x": 4,
+    "y": 0,
+    "w": 4,
+    "h": 4
+   },
+   "targets": [
+    {
+     "datasource": {
+      "type": "prometheus",
+      "uid": "prometheus"
+     },
+     "refId": "A",
+     "expr": "max(spark_analysis_check{window=\"$window\"})",
+     "instant": true
+    }
+   ],
+   "options": {
+    "reduceOptions": {
+     "calcs": [
+      "lastNotNull"
+     ],
+     "fields": "",
+     "values": false
+    },
+    "colorMode": "background",
+    "graphMode": "none",
+    "textMode": "value",
+    "justifyMode": "center"
+   },
+   "fieldConfig": {
+    "defaults": {
+     "mappings": [
+      {
+       "type": "value",
+       "options": {
+        "0": {
+         "text": "OK",
+         "color": "green",
+         "index": 0
+        },
+        "1": {
+         "text": "OK",
+         "color": "green",
+         "index": 1
+        },
+        "2": {
+         "text": "WARN",
+         "color": "orange",
+         "index": 2
+        },
+        "3": {
+         "text": "FAIL",
+         "color": "red",
+         "index": 3
+        }
+       }
+      }
+     ],
+     "noValue": "no data",
+     "color": {
+      "mode": "fixed",
+      "fixedColor": "text"
+     }
+    },
+    "overrides": []
+   }
+  },
+  {
+   "id": 3,
+   "type": "stat",
+   "title": "Failing / warning checks",
+   "description": "Number of failing and warning checks in the latest $window analysis.",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "prometheus"
+   },
+   "gridPos": {
+    "x": 8,
+    "y": 0,
+    "w": 4,
+    "h": 4
+   },
+   "targets": [
+    {
+     "datasource": {
+      "type": "prometheus",
+      "uid": "prometheus"
+     },
+     "refId": "A",
+     "expr": "spark_analysis_findings{window=\"$window\",severity=\"fail\"}",
+     "instant": true,
+     "legendFormat": "fail"
+    },
+    {
+     "datasource": {
+      "type": "prometheus",
+      "uid": "prometheus"
+     },
+     "refId": "B",
+     "expr": "spark_analysis_findings{window=\"$window\",severity=\"warn\"}",
+     "instant": true,
+     "legendFormat": "warn"
+    }
+   ],
+   "options": {
+    "reduceOptions": {
+     "calcs": [
+      "lastNotNull"
+     ],
+     "fields": "",
+     "values": false
+    },
+    "colorMode": "background",
+    "graphMode": "none",
+    "textMode": "value_and_name",
+    "justifyMode": "center",
+    "orientation": "horizontal"
+   },
+   "fieldConfig": {
+    "defaults": {
+     "thresholds": {
+      "mode": "absolute",
+      "steps": [
+       {
+        "color": "green",
+        "value": null
+       },
+       {
+        "color": "orange",
+        "value": 1
+       }
+      ]
+     }
+    },
+    "overrides": [
+     {
+      "matcher": {
+       "id": "byName",
+       "options": "fail"
+      },
+      "properties": [
+       {
+        "id": "thresholds",
+        "value": {
+         "mode": "absolute",
+         "steps": [
+          {
+           "color": "green",
+           "value": null
+          },
+          {
+           "color": "red",
+           "value": 1
+          }
+         ]
+        }
+       }
+      ]
+     }
+    ]
+   }
+  },
+  {
+   "id": 4,
+   "type": "stat",
+   "title": "Analysis ran",
+   "description": "When the latest $window analysis finished. Alert SparkAnalysisStale fires after 26 h without a daily run.",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "prometheus"
+   },
+   "gridPos": {
+    "x": 12,
+    "y": 0,
+    "w": 4,
+    "h": 4
+   },
+   "targets": [
+    {
+     "datasource": {
+      "type": "prometheus",
+      "uid": "prometheus"
+     },
+     "refId": "A",
+     "expr": "spark_analysis_last_run_timestamp_seconds{window=\"$window\"} * 1000",
+     "instant": true
+    }
+   ],
+   "options": {
+    "reduceOptions": {
+     "calcs": [
+      "lastNotNull"
+     ],
+     "fields": "",
+     "values": false
+    },
+    "colorMode": "none",
+    "graphMode": "none",
+    "textMode": "value",
+    "justifyMode": "center"
+   },
+   "fieldConfig": {
+    "defaults": {
+     "unit": "dateTimeFromNow",
+     "noValue": "never"
+    },
+    "overrides": []
+   }
+  },
+  {
+   "id": 5,
+   "type": "stat",
+   "title": "Benchmark",
+   "description": "Result of the latest nightly benchmark (analysis/spark-bench.py, 03:30). 0 = failed or skipped because the server stayed busy; see ~/spark-reports/cron.log.",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "prometheus"
+   },
+   "gridPos": {
+    "x": 16,
+    "y": 0,
+    "w": 4,
+    "h": 4
+   },
+   "targets": [
+    {
+     "datasource": {
+      "type": "prometheus",
+      "uid": "prometheus"
+     },
+     "refId": "A",
+     "expr": "spark_bench_last_success",
+     "instant": true
+    }
+   ],
+   "options": {
+    "reduceOptions": {
+     "calcs": [
+      "lastNotNull"
+     ],
+     "fields": "",
+     "values": false
+    },
+    "colorMode": "background",
+    "graphMode": "none",
+    "textMode": "value",
+    "justifyMode": "center"
+   },
+   "fieldConfig": {
+    "defaults": {
+     "mappings": [
+      {
+       "type": "value",
+       "options": {
+        "1": {
+         "text": "OK",
+         "color": "green",
+         "index": 0
+        },
+        "0": {
+         "text": "FAILED",
+         "color": "red",
+         "index": 1
+        }
+       }
+      }
+     ],
+     "noValue": "no data",
+     "color": {
+      "mode": "fixed",
+      "fixedColor": "text"
+     }
+    },
+    "overrides": []
+   }
+  },
+  {
+   "id": 6,
+   "type": "stat",
+   "title": "Benchmark ran",
+   "description": "When the nightly benchmark last ran.",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "prometheus"
+   },
+   "gridPos": {
+    "x": 20,
+    "y": 0,
+    "w": 4,
+    "h": 4
+   },
+   "targets": [
+    {
+     "datasource": {
+      "type": "prometheus",
+      "uid": "prometheus"
+     },
+     "refId": "A",
+     "expr": "spark_bench_last_run_timestamp_seconds * 1000",
+     "instant": true
+    }
+   ],
+   "options": {
+    "reduceOptions": {
+     "calcs": [
+      "lastNotNull"
+     ],
+     "fields": "",
+     "values": false
+    },
+    "colorMode": "none",
+    "graphMode": "none",
+    "textMode": "value",
+    "justifyMode": "center"
+   },
+   "fieldConfig": {
+    "defaults": {
+     "unit": "dateTimeFromNow",
+     "noValue": "never"
+    },
+    "overrides": []
+   }
+  },
+  {
+   "id": 7,
+   "type": "table",
+   "title": "Alerts now (firing and pending)",
+   "description": "Every Prometheus alert that is pending or firing now. Rule definitions and summaries: monitoring/prometheus/rules/spark.yml, or `make prom` → http://localhost:9090/alerts.",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "prometheus"
+   },
+   "gridPos": {
+    "x": 0,
+    "y": 4,
+    "w": 10,
+    "h": 8
+   },
+   "targets": [
+    {
+     "datasource": {
+      "type": "prometheus",
+      "uid": "prometheus"
+     },
+     "refId": "A",
+     "expr": "ALERTS",
+     "instant": true,
+     "range": false,
+     "format": "table"
+    }
+   ],
+   "options": {
+    "showHeader": true,
+    "cellHeight": "sm",
+    "sortBy": [
+     {
+      "displayName": "state",
+      "desc": false
+     }
+    ]
+   },
+   "fieldConfig": {
+    "defaults": {
+     "noValue": "No alerts",
+     "custom": {
+      "align": "auto",
+      "cellOptions": {
+       "type": "auto"
+      }
+     }
+    },
+    "overrides": [
+     {
+      "matcher": {
+       "id": "byName",
+       "options": "state"
+      },
+      "properties": [
+       {
+        "id": "custom.cellOptions",
+        "value": {
+         "type": "color-background"
+        }
+       },
+       {
+        "id": "custom.width",
+        "value": 90
+       },
+       {
+        "id": "mappings",
+        "value": [
+         {
+          "type": "value",
+          "options": {
+           "firing": {
+            "text": "firing",
+            "color": "red",
+            "index": 0
+           },
+           "pending": {
+            "text": "pending",
+            "color": "orange",
+            "index": 1
+           }
+          }
+         }
+        ]
+       }
+      ]
+     }
+    ]
+   },
+   "transformations": [
+    {
+     "id": "organize",
+     "options": {
+      "excludeByName": {
+       "Time": true,
+       "Value": true,
+       "__name__": true,
+       "instance": true,
+       "job": true,
+       "host_id": true,
+       "dgx_spark": true
+      },
+      "indexByName": {
+       "alertstate": 0,
+       "alertname": 1,
+       "severity": 2
+      },
+      "renameByName": {
+       "alertstate": "state",
+       "alertname": "alert"
+      }
+     }
+    }
+   ]
+  },
+  {
+   "id": 8,
+   "type": "state-timeline",
+   "title": "Alert history",
+   "description": "When each alert was firing during the selected time range (only alerts that fired are listed).",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "prometheus"
+   },
+   "gridPos": {
+    "x": 10,
+    "y": 4,
+    "w": 14,
+    "h": 8
+   },
+   "targets": [
+    {
+     "datasource": {
+      "type": "prometheus",
+      "uid": "prometheus"
+     },
+     "refId": "A",
+     "expr": "max by (alertname) (ALERTS{alertstate=\"firing\"})",
+     "legendFormat": "{{alertname}}",
+     "interval": "1m"
+    }
+   ],
+   "options": {
+    "showValue": "never",
+    "mergeValues": true,
+    "rowHeight": 0.8,
+    "alignValue": "left",
+    "legend": {
+     "showLegend": false,
+     "displayMode": "list",
+     "placement": "bottom"
+    },
+    "tooltip": {
+     "mode": "single",
+     "sort": "none"
+    }
+   },
+   "fieldConfig": {
+    "defaults": {
+     "mappings": [
+      {
+       "type": "value",
+       "options": {
+        "1": {
+         "text": "firing",
+         "color": "red",
+         "index": 0
+        }
+       }
+      }
+     ],
+     "color": {
+      "mode": "fixed",
+      "fixedColor": "red"
+     },
+     "noValue": "No alerts in range",
+     "custom": {
+      "fillOpacity": 80,
+      "lineWidth": 0
+     }
+    },
+    "overrides": []
+   }
+  },
+  {
+   "id": 9,
+   "type": "row",
+   "title": "Latest $window analysis — full report: make report (W=7d for weekly)",
+   "collapsed": false,
+   "gridPos": {
+    "x": 0,
+    "y": 12,
+    "w": 24,
+    "h": 1
+   },
+   "panels": []
+  },
+  {
+   "id": 10,
+   "type": "table",
+   "title": "Checks — problems first",
+   "description": "Every check of the latest periodic analysis with its result and, for WARN/FAIL, the recommendation. Thresholds and logic: analysis/spark-analyze.py.",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "prometheus"
+   },
+   "gridPos": {
+    "x": 0,
+    "y": 13,
+    "w": 24,
+    "h": 15
+   },
+   "targets": [
+    {
+     "datasource": {
+      "type": "prometheus",
+      "uid": "prometheus"
+     },
+     "refId": "A",
+     "expr": "spark_analysis_check{window=\"$window\"}",
+     "instant": true,
+     "range": false,
+     "format": "table"
+    }
+   ],
+   "options": {
+    "showHeader": true,
+    "cellHeight": "sm",
+    "sortBy": [
+     {
+      "displayName": "Status",
+      "desc": true
+     }
+    ]
+   },
+   "fieldConfig": {
+    "defaults": {
+     "noValue": "No analysis yet — make analyze",
+     "custom": {
+      "align": "left",
+      "wrapText": true,
+      "cellOptions": {
+       "type": "auto",
+       "wrapText": true
+      }
+     }
+    },
+    "overrides": [
+     {
+      "matcher": {
+       "id": "byName",
+       "options": "Status"
+      },
+      "properties": [
+       {
+        "id": "custom.cellOptions",
+        "value": {
+         "type": "color-background"
+        }
+       },
+       {
+        "id": "custom.width",
+        "value": 80
+       },
+       {
+        "id": "custom.align",
+        "value": "center"
+       },
+       {
+        "id": "mappings",
+        "value": [
+         {
+          "type": "value",
+          "options": {
+           "0": {
+            "text": "OK",
+            "color": "green",
+            "index": 0
+           },
+           "1": {
+            "text": "NOTE",
+            "color": "blue",
+            "index": 1
+           },
+           "2": {
+            "text": "WARN",
+            "color": "orange",
+            "index": 2
+           },
+           "3": {
+            "text": "FAIL",
+            "color": "red",
+            "index": 3
+           }
+          }
+         }
+        ]
+       }
+      ]
+     },
+     {
+      "matcher": {
+       "id": "byName",
+       "options": "Section"
+      },
+      "properties": [
+       {
+        "id": "custom.width",
+        "value": 110
+       }
+      ]
+     },
+     {
+      "matcher": {
+       "id": "byName",
+       "options": "Check"
+      },
+      "properties": [
+       {
+        "id": "custom.width",
+        "value": 210
+       }
+      ]
+     },
+     {
+      "matcher": {
+       "id": "byName",
+       "options": "Recommendation"
+      },
+      "properties": [
+       {
+        "id": "custom.width",
+        "value": 520
+       }
+      ]
+     }
+    ]
+   },
+   "transformations": [
+    {
+     "id": "filterFieldsByName",
+     "options": {
+      "include": {
+       "names": [
+        "Value",
+        "section",
+        "check",
+        "result",
+        "advice",
+        "order"
+       ]
+      }
+     }
+    },
+    {
+     "id": "sortBy",
+     "options": {
+      "sort": [
+       {
+        "field": "order",
+        "desc": false
+       }
+      ]
+     }
+    },
+    {
+     "id": "organize",
+     "options": {
+      "excludeByName": {
+       "order": true
+      },
+      "indexByName": {
+       "Value": 0,
+       "section": 1,
+       "check": 2,
+       "result": 3,
+       "advice": 4
+      },
+      "renameByName": {
+       "Value": "Status",
+       "section": "Section",
+       "check": "Check",
+       "result": "Result",
+       "advice": "Recommendation"
+      }
+     }
+    }
+   ]
+  },
+  {
+   "id": 11,
+   "type": "row",
+   "title": "Trends",
+   "collapsed": false,
+   "gridPos": {
+    "x": 0,
+    "y": 28,
+    "w": 24,
+    "h": 1
+   },
+   "panels": []
+  },
+  {
+   "id": 12,
+   "type": "timeseries",
+   "title": "Benchmark: decode tok/s",
+   "description": "Nightly benchmark decode speed. decode: single stream; ctx32k: at ~32k tokens of context; conc4: 4 streams summed. Dashed: SparkBenchRegression fires below this line (85% of the 14-day median). Baseline 2026-11-02: 43.5 / 44.3 / 134.8 tok/s.",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "prometheus"
+   },
+   "gridPos": {
+    "x": 0,
+    "y": 29,
+    "w": 8,
+    "h": 8
+   },
+   "targets": [
+    {
+     "datasource": {
+      "type": "prometheus",
+      "uid": "prometheus"
+     },
+     "refId": "A",
+     "expr": "spark_bench_decode_tokens_per_second",
+     "legendFormat": "{{case}}",
+     "interval": "5m"
+    },
+    {
+     "datasource": {
+      "type": "prometheus",
+      "uid": "prometheus"
+     },
+     "refId": "B",
+     "expr": "0.85 * quantile_over_time(0.5, spark_bench_decode_tokens_per_second[14d])",
+     "legendFormat": "{{case}} alert line",
+     "interval": "5m"
+    }
+   ],
+   "options": {
+    "legend": {
+     "showLegend": true,
+     "displayMode": "table",
+     "placement": "bottom",
+     "calcs": [
+      "lastNotNull",
+      "min"
+     ]
+    },
+    "tooltip": {
+     "mode": "multi",
+     "sort": "desc"
+    }
+   },
+   "fieldConfig": {
+    "defaults": {
+     "custom": {
+      "lineInterpolation": "stepAfter",
+      "lineWidth": 2,
+      "fillOpacity": 0,
+      "showPoints": "never",
+      "spanNulls": true
+     },
+     "unit": "short",
+     "decimals": 1
+    },
+    "overrides": [
+     {
+      "matcher": {
+       "id": "byRegexp",
+       "options": ".*alert line"
+      },
+      "properties": [
+       {
+        "id": "custom.lineStyle",
+        "value": {
+         "fill": "dash",
+         "dash": [
+          6,
+          6
+         ]
+        }
+       },
+       {
+        "id": "custom.lineWidth",
+        "value": 1
+       }
+      ]
+     }
+    ]
+   }
+  },
+  {
+   "id": 13,
+   "type": "timeseries",
+   "title": "Benchmark: 32k prompt — prefill and first token",
+   "description": "How fast the box reads a ~32k-token prompt (left) and how long the first token takes (right).",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "prometheus"
+   },
+   "gridPos": {
+    "x": 8,
+    "y": 29,
+    "w": 8,
+    "h": 8
+   },
+   "targets": [
+    {
+     "datasource": {
+      "type": "prometheus",
+      "uid": "prometheus"
+     },
+     "refId": "A",
+     "expr": "spark_bench_prefill_tokens_per_second{case=\"ctx32k\"}",
+     "legendFormat": "prefill tok/s",
+     "interval": "5m"
+    },
+    {
+     "datasource": {
+      "type": "prometheus",
+      "uid": "prometheus"
+     },
+     "refId": "B",
+     "expr": "spark_bench_ttft_seconds{case=\"ctx32k\"}",
+     "legendFormat": "time to first token",
+     "interval": "5m"
+    }
+   ],
+   "options": {
+    "legend": {
+     "showLegend": true,
+     "displayMode": "table",
+     "placement": "bottom",
+     "calcs": [
+      "lastNotNull",
+      "min"
+     ]
+    },
+    "tooltip": {
+     "mode": "multi",
+     "sort": "desc"
+    }
+   },
+   "fieldConfig": {
+    "defaults": {
+     "custom": {
+      "lineInterpolation": "stepAfter",
+      "lineWidth": 2,
+      "fillOpacity": 0,
+      "showPoints": "never",
+      "spanNulls": true
+     },
+     "unit": "short"
+    },
+    "overrides": [
+     {
+      "matcher": {
+       "id": "byName",
+       "options": "time to first token"
+      },
+      "properties": [
+       {
+        "id": "unit",
+        "value": "s"
+       },
+       {
+        "id": "custom.axisPlacement",
+        "value": "right"
+       }
+      ]
+     }
+    ]
+   }
+  },
+  {
+   "id": 14,
+   "type": "timeseries",
+   "title": "Analysis: failing / warning checks",
+   "description": "Failing and warning checks per analysis run. A rise means something changed on the box; open the table above or `make report`.",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "prometheus"
+   },
+   "gridPos": {
+    "x": 16,
+    "y": 29,
+    "w": 8,
+    "h": 8
+   },
+   "targets": [
+    {
+     "datasource": {
+      "type": "prometheus",
+      "uid": "prometheus"
+     },
+     "refId": "A",
+     "expr": "spark_analysis_findings{severity=~\"fail|warn\"}",
+     "legendFormat": "{{window}} {{severity}}",
+     "interval": "5m"
+    }
+   ],
+   "options": {
+    "legend": {
+     "showLegend": true,
+     "displayMode": "table",
+     "placement": "bottom",
+     "calcs": [
+      "lastNotNull",
+      "min"
+     ]
+    },
+    "tooltip": {
+     "mode": "multi",
+     "sort": "desc"
+    }
+   },
+   "fieldConfig": {
+    "defaults": {
+     "custom": {
+      "lineInterpolation": "stepAfter",
+      "lineWidth": 2,
+      "fillOpacity": 0,
+      "showPoints": "never",
+      "spanNulls": true
+     },
+     "unit": "short",
+     "decimals": 0,
+     "min": 0
+    },
+    "overrides": [
+     {
+      "matcher": {
+       "id": "byRegexp",
+       "options": ".*fail"
+      },
+      "properties": [
+       {
+        "id": "color",
+        "value": {
+         "mode": "fixed",
+         "fixedColor": "red"
+        }
+       }
+      ]
+     }
+    ]
+   }
+  }
+ ]
+}

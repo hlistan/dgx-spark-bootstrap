@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+# Run the static quality gates before every commit (S7). Enable once per clone: `make hooks`.
+# Skip in an emergency with `git commit --no-verify` — then run `make lint` before deploying.
+exec "$(git rev-parse --show-toplevel)/scripts/lint.sh"

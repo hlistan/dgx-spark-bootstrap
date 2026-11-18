@@ -1,0 +1,11 @@
+# ruff for `make lint` (S7): pyflakes/pycodestyle, bugbear, pyupgrade, and bandit (S) security checks.
+line-length = 120
+target-version = "py312"   # the Spark's python3 (analysis/ runs there)
+
+[lint]
+select = ["E", "F", "W", "B", "UP", "S", "I", "SIM"]
+ignore = [
+  "E701", "E702",          # one-line `if x: y` / `a; b` keep these small scripts compact
+  "S603", "S607",          # subprocess with fixed argv lists (docker, nvidia-smi) is the point of analysis/
+  "S310",                  # urllib to fixed http URLs on the LAN / loopback
+]

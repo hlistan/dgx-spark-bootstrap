@@ -6,12 +6,14 @@ host network; exporters bind to `127.0.0.1`, Grafana to the LAN IP behind a logi
 
 | Layer | Source | Port | Key signals |
 |---|---|---|---|
-| Hardware (GPU) | `nvidia_gpu_exporter` 1.15.1 (nvidia-smi) | 9835 | temp, **T.Limit** headroom, power, SM clock vs max, throttle reason counters (thermal / power brake / power cap) |
+| Hardware (GPU) | `nvidia_gpu_exporter` (nvidia-smi) | 9835 | temp, **T.Limit** headroom, power, SM clock vs max, throttle reason counters (thermal / power brake / power cap) |
 | Hardware (host) | node_exporter hwmon / EDAC | 9100 | NVMe temps, thermal zones, memory ECC (EDAC) |
-| OS | node_exporter 1.12.1 | 9100 | **MemAvailable** (unified memory — the number that decides vLLM OOM), swap, disk, net, load, systemd unit states, NTP |
-| Containers | cAdvisor 0.60.6 | 8088 | per-container CPU / memory working set / restarts |
+| OS | node_exporter | 9100 | **MemAvailable** (unified memory — the number that decides vLLM OOM), swap, disk, net, load, systemd unit states, NTP |
+| Containers | cAdvisor | 8088 | per-container CPU / memory working set / restarts |
 | Inference | vLLM `/metrics` (llm :8000) | — | tok/s, TTFT / ITL / E2E histograms, KV-cache %, running / waiting, preemptions, prefix-cache hits, spec-decode acceptance |
-| Availability | blackbox_exporter 0.29.0 | 9115 | `/health` of llm, Grafana |
+| Availability | blackbox_exporter | 9115 | `/health` of llm, Grafana |
+
+Image versions are pinned in `compose.yaml`, which is the only place they are written down; Dependabot updates them there.
 
 Why not DCGM: `dcgm-exporter` is reported to fail to enumerate GB10 on several DGX OS builds and, like NVML, has no
 framebuffer memory to report on unified memory. `nvidia_gpu_exporter` reads everything `nvidia-smi` shows (verified

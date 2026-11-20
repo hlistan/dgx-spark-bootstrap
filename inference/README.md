@@ -82,6 +82,11 @@ Clients need `SPARK_API_KEY` and `SPARK_LLM_BASE_URL` / `SPARK_LLM_MODEL` / `SPA
 `qwen3.8-27b`, and set its context window to 262144.
 - Thinking is on by default (reasoning parser `qwen3`). It is better for agentic coding but slower. A client that
   wants quick edits can send `"chat_template_kwargs": {"enable_thinking": false}` per request.
+- Thinking depth: `"reasoning_effort"` is `xhigh` by default; `medium` and `low` also work, as a top-level request
+  field or inside `chat_template_kwargs`. Measured 2026-11-20 on three small prompts (2 runs each): no level gave a
+  wrong answer, and lower effort was not reliably shorter (bug fix: 460–1860 reasoning tokens at `xhigh`, 115–340 at
+  `medium`; code trace: 230–295 at `xhigh`, 455–555 at `medium`). Thinking off got the code trace wrong 2/2. So the
+  server default stays `xhigh`; a client can lower it per request.
 - Tools: `qwen3_xml` parser with auto tool choice; clients send OpenAI `tools` as usual.
 - Don't send `presence_penalty` (S4): sampling comes from the model's `generation_config.json`.
 

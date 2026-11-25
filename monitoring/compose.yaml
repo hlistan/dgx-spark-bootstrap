@@ -37,7 +37,7 @@ services:
 
   grafana:
     <<: *common
-    image: grafana/grafana:13.3.0
+    image: grafana/grafana:13.3.1
     container_name: spark-grafana
     mem_limit: 768m  # 512m was OOM-killed ~13×/day (Grafana 13.2, 2026-11-17)
     environment:
